@@ -41,10 +41,32 @@ import (
 )
 
 type Parser struct {
-	l         *lexer.Lexer
+	l      *lexer.Lexer
+	errors []string
+
 	curToken  token.Token
 	peekToken token.Token
-	errors    []string
+
+	prefixParserFns map[token.TokenType]prefixParseFn
+	infixParserFns  map[token.TokenType]infixParseFn
+}
+
+/*
+The argument for the infix function is the 'lhs' of the infix
+operator that's being parsed
+*/
+type (
+	prefixParseFn func() ast.Expression
+	infixParseFn  func(ast.Expression) ast.Expression
+)
+
+// Register fns for token types
+func (p *Parser) registerPrefixFn(tt token.TokenType, fn prefixParseFn) {
+	p.prefixParserFns[tt] = fn
+}
+
+func (p *Parser) registerInfixFn(tt token.TokenType, fn infixParseFn) {
+	p.infixParserFns[tt] = fn
 }
 
 // Errors
