@@ -95,6 +95,10 @@ func (p *Parser) peekError(t token.TokenType) {
 	msg := fmt.Sprintf("Expected next token type to be '%s', found '%s'", t, p.peekToken.Type)
 	p.errors = append(p.errors, msg)
 }
+func (p *Parser) noPrefixParseError(tt token.TokenType) {
+	msg := fmt.Sprintf("Expected a valid prefix for %s", tt)
+	p.errors = append(p.errors, msg)
+}
 
 func (p *Parser) nextToken() {
 	// The 'peek' token is actually the latest consumed token
@@ -132,6 +136,7 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	// Grab the prefix parsing function, and apply it (if any are found)
 	prefix := p.prefixParserFns[p.curToken.Type]
 	if prefix == nil {
+		p.noPrefixParseError(p.curToken.Type)
 		return nil
 	}
 
@@ -149,6 +154,16 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 	}
 
 	return stmt
+}
+func (p *Parser) parsePrefixExpression() ast.Expression {
+	expr := &ast.PrefixExpression{
+		Token:    p.curToken,
+		Operator: p.curToken.Literal,
+	}
+	p.nextToken()
+	right := p.parseExpression(PREFIX)
+	expr.Right = right
+	return expr
 }
 
 func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
@@ -208,13 +223,13 @@ func (p *Parser) parseIdentifier() ast.Expression {
 }
 
 func (p *Parser) parseIntegerLiteral() ast.Expression {
-	intLiteral, err := strconv.ParseInt(p.curToken.Literal, 0, 64)
+	value, err := strconv.ParseInt(p.curToken.Literal, 0, 64)
 	if err != nil {
 		msg := fmt.Sprintf("%q Could Not Be Parsed As Int", p.curToken.Literal)
 		p.errors = append(p.errors, msg)
 		return nil
 	}
-	return &ast.IntegerLiteral{Token: p.curToken, Value: intLiteral}
+	return &ast.IntegerLiteral{Token: p.curToken, Value: value}
 }
 
 func New(lexer *lexer.Lexer) *Parser {
@@ -222,6 +237,8 @@ func New(lexer *lexer.Lexer) *Parser {
 	p.prefixParserFns = make(map[token.TokenType]prefixParseFn)
 	p.registerPrefixFn(token.IDENT, p.parseIdentifier)
 	p.registerPrefixFn(token.INT, p.parseIntegerLiteral)
+	p.registerPrefixFn(token.MINUS, p.parsePrefixExpression)
+	p.registerPrefixFn(token.BANG, p.parsePrefixExpression)
 	// Sets curToken to peekToken (which is nil at this point), sets peekToken = 0
 	p.nextToken()
 	// Sets curToken to peekToken (which is now 0), sets peekToken = 1
