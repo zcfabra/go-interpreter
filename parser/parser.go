@@ -33,7 +33,46 @@ Each token type can have two parsing fns associated w/ it depending on the
 token's position -- this allows distinguishing btwn. infix and prefix operator
 
 
-How the parser ACTUALLY works
+How the parser ACTUALLY works:
+** The goal is to have operators w/ higher precedence be lower in the AST
+(i.e. they get evaluated first)
+
+Example step through: 1 + 2 + 3;
+
+1. Cur token is 1, peek token is +
+parseExpression()
+|> get prefix fn
+|> parseIntegerLiteral()
+|> infix for loop
+|> pass in result of parseIntegerLiteral as leftExpr
+2. Cur token is +, peek token is 2
+|> get function parseInfixExpression()
+|> get precedence of next token (2)
+|> parse right expression
+|> return InfixEXpression
+3. Cur token is 2, peek token is +
+|> get prefix fn
+|> call parseIntegerLiteral()
+|> Infix for loop skipped (curToken of 2 has lower precedence than peekToken +)
+|> return prefix only (2 as an integer literal)
+|> have now popped back to the outermost parseExpression frame -- the infix expression
+made from 1 + 2 is now the lhs of an infix
+4. Cur token is +, peek token is 3
+|> call parseInfixExpression()
+|> ...
+|> once it pops back up, lhs = an infix w/ + as the operator, 3 (as an IntegerLiteral)
+as the RHS and the previous InfixExpression (1 + 2) as the LHS
+
+At this point, the AST is (+ (+ 1 2) 3)
+
+In parseExpression when the precedence is evaluated, it represents the "right binding power"
+of the current parseExpression invocation --> the amount of righwards tokens that can be binded
+We saw that then the precendence was +, we could bind int literals to the right,
+but when the precedence was an int and the next token was +, it could not be bound
+
+Left binding power can be found through the peekPrecedence() call
+the check the for loop after prefix parsing in parseExpression()
+if all about weighing left binding power vs right binding power
 
 */
 
