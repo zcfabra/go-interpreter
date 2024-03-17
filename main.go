@@ -12,7 +12,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	fmt.Printf("[%s] START REPL SESSION\n", user.Username)
 	repl.Start(os.Stdin, os.Stdout)
-
 }
