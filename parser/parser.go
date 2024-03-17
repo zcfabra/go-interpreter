@@ -31,6 +31,10 @@ associated w/ token types, rather than grammar rules
 
 Each token type can have two parsing fns associated w/ it depending on the
 token's position -- this allows distinguishing btwn. infix and prefix operator
+
+
+How the parser ACTUALLY works
+
 */
 
 import (
@@ -38,6 +42,19 @@ import (
 	"lang/ast"
 	"lang/lexer"
 	"lang/token"
+	"strconv"
+)
+
+// Operator Precedence
+const (
+	_ int = iota
+	LOWEST
+	EQUALS
+	LESSGREATER
+	SUM
+	PRODUCT
+	PREFIX
+	CALL
 )
 
 type Parser struct {
@@ -107,8 +124,31 @@ func (p *Parser) ParseStatement() ast.Statement {
 	case token.RETURN:
 		return p.parseReturnStatement()
 	default:
+		return p.parseExpressionStatement()
+	}
+}
+
+func (p *Parser) parseExpression(precedence int) ast.Expression {
+	// Grab the prefix parsing function, and apply it (if any are found)
+	prefix := p.prefixParserFns[p.curToken.Type]
+	if prefix == nil {
 		return nil
 	}
+
+	leftExp := prefix()
+	return leftExp
+}
+
+func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
+	stmt := &ast.ExpressionStatement{}
+
+	stmt.Expression = p.parseExpression(LOWEST)
+
+	if p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
+	}
+
+	return stmt
 }
 
 func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
@@ -163,8 +203,25 @@ func (p *Parser) curTokenIs(tt token.TokenType) bool {
 	return p.curToken.Type == tt
 }
 
+func (p *Parser) parseIdentifier() ast.Expression {
+	return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+}
+
+func (p *Parser) parseIntegerLiteral() ast.Expression {
+	intLiteral, err := strconv.ParseInt(p.curToken.Literal, 0, 64)
+	if err != nil {
+		msg := fmt.Sprintf("%q Could Not Be Parsed As Int", p.curToken.Literal)
+		p.errors = append(p.errors, msg)
+		return nil
+	}
+	return &ast.IntegerLiteral{Token: p.curToken, Value: intLiteral}
+}
+
 func New(lexer *lexer.Lexer) *Parser {
 	p := &Parser{l: lexer, errors: []string{}}
+	p.prefixParserFns = make(map[token.TokenType]prefixParseFn)
+	p.registerPrefixFn(token.IDENT, p.parseIdentifier)
+	p.registerPrefixFn(token.INT, p.parseIntegerLiteral)
 	// Sets curToken to peekToken (which is nil at this point), sets peekToken = 0
 	p.nextToken()
 	// Sets curToken to peekToken (which is now 0), sets peekToken = 1
