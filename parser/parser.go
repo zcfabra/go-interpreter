@@ -272,6 +272,18 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 
 	return stmt
 }
+func (p *Parser) parseBoolean() ast.Expression {
+	return &ast.Boolean{Token: p.curToken, Value: p.curTokenIs(token.TRUE)}
+}
+
+func (p *Parser) parseGroupedExpression() ast.Expression {
+	p.nextToken()
+	expr := p.parseExpression(LOWEST)
+	if !p.expectPeek(token.RPAREN) {
+		return nil
+	}
+	return expr
+}
 
 func (p *Parser) expectPeek(tt token.TokenType) bool {
 	// Expect peek is an 'assertion' function (very commmon in parsers)
@@ -319,6 +331,52 @@ func (p *Parser) parseIntegerLiteral() ast.Expression {
 	return &ast.IntegerLiteral{Token: p.curToken, Value: value}
 }
 
+func (p *Parser) parseIfStatement() ast.Expression {
+	expr := &ast.IfExpression{Token: p.curToken}
+
+	if !p.expectPeek(token.LPAREN) {
+		return nil
+	}
+
+	p.nextToken()
+
+	expr.Condition = p.parseExpression(LOWEST)
+	if !p.expectPeek(token.RPAREN) {
+		return nil
+	}
+	// expectPeek also incrs the tokens
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+
+	expr.Consequence = p.parseBlockStatement()
+
+	if p.expectPeek(token.ELSE) {
+		// Consume the else token
+		p.nextToken()
+		if !p.expectPeek(token.LBRACE) {
+			return nil
+		}
+		expr.Alternative = p.parseBlockStatement()
+	}
+
+	return expr
+}
+
+func (p *Parser) parseBlockStatement() *ast.BlockStatement {
+	stmt := &ast.BlockStatement{Token: p.curToken}
+	stmt.Statements = []ast.Statement{}
+	p.nextToken()
+
+	for !(p.curTokenIs(token.RBRACE) || p.curTokenIs(token.EOF)) {
+		if s := p.ParseStatement(); s != nil {
+			stmt.Statements = append(stmt.Statements, s)
+		}
+	}
+
+	return stmt
+}
+
 func New(lexer *lexer.Lexer) *Parser {
 	p := &Parser{l: lexer, errors: []string{}}
 	// Prefix fns
@@ -327,6 +385,10 @@ func New(lexer *lexer.Lexer) *Parser {
 	p.registerPrefixFn(token.INT, p.parseIntegerLiteral)
 	p.registerPrefixFn(token.MINUS, p.parsePrefixExpression)
 	p.registerPrefixFn(token.BANG, p.parsePrefixExpression)
+	p.registerPrefixFn(token.LPAREN, p.parseGroupedExpression)
+
+	p.registerPrefixFn(token.TRUE, p.parseBoolean)
+	p.registerPrefixFn(token.FALSE, p.parseBoolean)
 	// Infix fns
 	p.infixParserFns = make(map[token.TokenType]infixParseFn)
 	p.registerInfixFn(token.PLUS, p.parseInfixExpression)
