@@ -389,6 +389,8 @@ func New(lexer *lexer.Lexer) *Parser {
 
 	p.registerPrefixFn(token.TRUE, p.parseBoolean)
 	p.registerPrefixFn(token.FALSE, p.parseBoolean)
+
+	p.registerPrefixFn(token.IF, p.parseIfStatement)
 	// Infix fns
 	p.infixParserFns = make(map[token.TokenType]infixParseFn)
 	p.registerInfixFn(token.PLUS, p.parseInfixExpression)
