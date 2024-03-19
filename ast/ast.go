@@ -3,6 +3,7 @@ package ast
 import (
 	"bytes"
 	"lang/token"
+	"strings"
 )
 
 type Node interface {
@@ -36,6 +37,17 @@ type ReturnStatement struct {
 type ExpressionStatement struct {
 	Token      token.Token
 	Expression Expression
+}
+type FunctionLiteral struct {
+	Token      token.Token
+	Parameters []*Identifier
+	Body       *BlockStatement
+}
+
+type CallExpression struct {
+	Token     token.Token
+	Function  Expression
+	Arguments []Expression
 }
 type Identifier struct {
 	Token token.Token // IDENT type token
@@ -146,8 +158,8 @@ func (ie *InfixExpression) String() string {
 	// Prefix notation
 	var out bytes.Buffer
 	out.WriteString("(")
-	out.WriteString(ie.Operator)
-	out.WriteString(ie.Left.String() + " ")
+	out.WriteString(ie.Left.String())
+	out.WriteString(" " + ie.Operator + " ")
 	out.WriteString(ie.Right.String())
 	out.WriteString(")")
 
@@ -162,9 +174,10 @@ func (ife *IfExpression) expressionNode()      {}
 func (ife *IfExpression) TokenLiteral() string { return ife.Token.Literal }
 func (ife *IfExpression) String() string {
 	var out bytes.Buffer
-	out.WriteString("if ")
-	out.WriteString("(" + ife.Condition.String() + ")")
-	out.WriteString(ife.Consequence.String() + " ")
+	out.WriteString("if")
+	out.WriteString(ife.Condition.String())
+	out.WriteString(" ")
+	out.WriteString(ife.Consequence.String())
 	if ife.Alternative != nil {
 		out.WriteString("else ")
 		out.WriteString(ife.Alternative.String())
@@ -179,6 +192,44 @@ func (bs *BlockStatement) String() string {
 	for _, stmt := range bs.Statements {
 		out.WriteString(stmt.String())
 	}
+	return out.String()
+}
+
+func (fl *FunctionLiteral) expressionNode()      {}
+func (fl *FunctionLiteral) TokenLiteral() string { return fl.Token.Literal }
+func (fl *FunctionLiteral) String() string {
+	var out bytes.Buffer
+	params := []string{}
+	for _, p := range fl.Parameters {
+		params = append(params, p.String())
+	}
+
+	out.WriteString(fl.TokenLiteral())
+	out.WriteString("(")
+	out.WriteString(strings.Join(params, ", "))
+	out.WriteString(")")
+	out.WriteString(fl.Body.String())
+	return out.String()
+}
+
+func (ce *CallExpression) expressionNode()      {}
+func (ce *CallExpression) TokenLiteral() string { return ce.Token.Literal }
+func (ce *CallExpression) String() string {
+	var out bytes.Buffer
+
+	args := []string{}
+
+	// fmt.Print("ARG LIST IN STRING OF CALL EXE: ")
+	// fmt.Print(ce.Arguments)
+	// fmt.Println("")
+	for _, arg := range ce.Arguments {
+		args = append(args, arg.String())
+	}
+
+	out.WriteString(ce.Function.String())
+	out.WriteString("(")
+	out.WriteString(strings.Join(args, ", "))
+	out.WriteString(")")
 	return out.String()
 }
 
