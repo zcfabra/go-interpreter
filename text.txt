@@ -1,0 +1,6 @@
+def hi(a: int, b: int) -> Option[int]:
+    if a > b:
+        return Some(a + b)
+    return None
+
+hi(10, 10)
