@@ -28,7 +28,7 @@ func Eval(node ast.Node) object.Object {
 	case *ast.IntegerLiteral:
 		return &object.Integer{Value: node.Value}
 	case *ast.Boolean:
-		return globalBool(node)
+		return getGlobalBool(node.Value)
 	}
 	return nil
 }
@@ -45,23 +45,38 @@ func evalStatements(statemnts []ast.Statement) object.Object {
 func evalInfixExpression(
 	operator string, left object.Object, right object.Object,
 ) object.Object {
-	switch operator {
-	case "+":
-		return evalPlusInfixExpression(left, right)
+	switch {
+	case left.Type() == object.INTEGER_OBJ && right.Type() == object.INTEGER_OBJ:
+		return evalIntegerInfixExpression(operator, left, right)
 	default:
 		return NULL
 	}
-
 }
 
-func evalPlusInfixExpression(left object.Object, right object.Object) object.Object {
-	if !(left.Type() == object.INTEGER_OBJ || right.Type() == object.INTEGER_OBJ) {
-		return NULL
-	}
-
+func evalIntegerInfixExpression(operator string, left object.Object, right object.Object) object.Object {
 	l := left.(*object.Integer).Value
 	r := right.(*object.Integer).Value
-	return &object.Integer{Value: l + r}
+
+	switch operator {
+	case "+":
+		return &object.Integer{Value: l + r}
+	case "-":
+		return &object.Integer{Value: l - r}
+	case "*":
+		return &object.Integer{Value: l * r}
+	case "/":
+		return &object.Integer{Value: l / r}
+	case ">":
+		return getGlobalBool(l > r)
+	case "<":
+		return getGlobalBool(l < r)
+	case "==":
+		return getGlobalBool(l == r)
+	case "!=":
+		return getGlobalBool(l != r)
+	default:
+		return NULL
+	}
 }
 
 func evalPrefixExpression(operator string, right object.Object) object.Object {
@@ -96,8 +111,8 @@ func evalMinusPrefixOperator(operand object.Object) object.Object {
 	return &object.Integer{Value: value * -1}
 }
 
-func globalBool(boolNode *ast.Boolean) *object.Boolean {
-	if boolNode.Value {
+func getGlobalBool(boolNode bool) *object.Boolean {
+	if boolNode {
 		return TRUE
 	}
 	return FALSE
