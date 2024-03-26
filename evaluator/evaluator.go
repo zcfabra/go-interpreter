@@ -14,7 +14,7 @@ var (
 func Eval(node ast.Node) object.Object {
 	switch node := node.(type) {
 	case *ast.Program:
-		return evalStatements(node.Statements)
+		return evalProgram(node)
 	case *ast.ExpressionStatement:
 		return Eval(node.Expression)
 	case *ast.ReturnStatement:
@@ -37,9 +37,21 @@ func Eval(node ast.Node) object.Object {
 	return nil
 }
 
-func evalStatements(statemnts []ast.Statement) object.Object {
+func evalBlockStatements(block *ast.BlockStatement) object.Object {
 	var result object.Object
-	for _, stmt := range statemnts {
+	for _, stmt := range block.Statements {
+		result = Eval(stmt)
+
+		if result != nil && result.Type() == object.RETURN_VALUE_OBJ {
+			return result
+		}
+	}
+	return result
+}
+
+func evalProgram(program *ast.Program) object.Object {
+	var result object.Object
+	for _, stmt := range program.Statements {
 		result = Eval(stmt)
 
 		if returnValue, ok := result.(*object.ReturnValue); ok {
@@ -50,12 +62,12 @@ func evalStatements(statemnts []ast.Statement) object.Object {
 	return result
 }
 
-func evalIfExpression(statment *ast.IfExpression) object.Object {
-	cond := Eval(statment.Condition)
+func evalIfExpression(statement *ast.IfExpression) object.Object {
+	cond := Eval(statement.Condition)
 	if isTruthy(cond) {
-		return evalStatements(statment.Consequence.Statements)
-	} else if statment.Alternative != nil {
-		return evalStatements(statment.Alternative.Statements)
+		return evalBlockStatements(statement.Consequence)
+	} else if statement.Alternative != nil {
+		return evalBlockStatements(statement.Alternative)
 	}
 	return NULL
 }
