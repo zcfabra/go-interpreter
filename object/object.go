@@ -2,6 +2,24 @@ package object
 
 import "fmt"
 
+func NewEnvironment() *Environment {
+	store := make(map[string]Object)
+	return &Environment{store: store}
+}
+
+type Environment struct {
+	store map[string]Object
+}
+
+func (env *Environment) Get(name string) (Object, bool) {
+	obj, ok := env.store[name]
+	return obj, ok
+}
+func (env *Environment) Set(name string, val Object) Object {
+	env.store[name] = val
+	return val
+}
+
 type ObjectType string
 type Object interface {
 	Type() ObjectType
@@ -13,6 +31,7 @@ const (
 	BOOLEAN_OBJ      = "BOOLEAN"
 	NULL_OBJ         = "NULL"
 	RETURN_VALUE_OBJ = "RETURN_VALUE"
+	ERROR_OBJ        = "ERROR"
 )
 
 type Integer struct {
@@ -38,9 +57,12 @@ type ReturnValue struct {
 	Value Object
 }
 
-func (rv *ReturnValue) Type() ObjectType {
-	return RETURN_VALUE_OBJ
+func (rv *ReturnValue) Type() ObjectType { return RETURN_VALUE_OBJ }
+func (rv *ReturnValue) Inspect() string  { return rv.Value.Inspect() }
+
+type Error struct {
+	Message string
 }
-func (rv *ReturnValue) Inspect() string {
-	return rv.Value.Inspect()
-}
+
+func (e *Error) Type() ObjectType { return ERROR_OBJ }
+func (e *Error) Inspect() string  { return e.Message }
