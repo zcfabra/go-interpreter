@@ -108,7 +108,10 @@ func evalArrayIndexExpression(left, index object.Object) object.Object {
 	arr := left.(*object.Array)
 	ix := index.(*object.Integer).Value
 	max := int64(len(arr.Elements) - 1)
-	if ix < 0 || ix > max {
+	if ix < 0 {
+		return arr.Elements[len(arr.Elements)+int(ix)]
+	}
+	if ix > max {
 		return NULL
 	}
 	return arr.Elements[ix]
@@ -118,7 +121,10 @@ func evalStringIndexExpression(left, index object.Object) object.Object {
 	str := left.(*object.String).Value
 	ix := index.(*object.Integer).Value
 	max := int64(len(str) - 1)
-	if ix < 0 || ix > max {
+	if ix < 0 {
+		return &object.String{Value: string(str[len(str)+int(ix)])}
+	}
+	if ix > max {
 		return NULL
 	}
 	return &object.String{Value: string(str[ix])}
