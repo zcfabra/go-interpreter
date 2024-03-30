@@ -39,12 +39,12 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		if len(args) == 1 && isError(args[0]) {
 			return args[0]
 		}
-
 		fn := applyFunction(function, args)
 		return fn
-
 	case *ast.Identifier:
 		return evalIdentifier(node, env)
+	case *ast.StringLiteral:
+		return &object.String{Value: node.Value}
 	case *ast.ReturnStatement:
 		val := Eval(node.ReturnValue, env)
 		if isError(val) {
@@ -180,9 +180,21 @@ func evalInfixExpression(
 		return newError("type mismatch: %s %s %s", left.Type(), operator, right.Type())
 	case left.Type() == object.INTEGER_OBJ && right.Type() == object.INTEGER_OBJ:
 		return evalIntegerInfixExpression(operator, left, right)
+	case left.Type() == object.STRING_OBJ && right.Type() == object.STRING_OBJ:
+		return evalStringInfixExpression(operator, left, right)
 	default:
 		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
 	}
+}
+
+func evalStringInfixExpression(operator string, l object.Object, r object.Object) object.Object {
+	if operator != "+" {
+		return newError("unknown operator: %s %s %s", l.Type(), operator, r.Type())
+	}
+	left := l.(*object.String).Value
+	right := r.(*object.String).Value
+
+	return &object.String{Value: left + right}
 }
 
 func evalIntegerInfixExpression(operator string, left object.Object, right object.Object) object.Object {

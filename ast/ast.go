@@ -85,6 +85,11 @@ type BlockStatement struct {
 	Statements []Statement
 }
 
+type StringLiteral struct {
+	Token token.Token
+	Value string
+}
+
 func (p *Program) String() string {
 	var out bytes.Buffer
 	for _, s := range p.Statements {
@@ -242,6 +247,10 @@ func (p *Program) TokenLiteral() string {
 		return ""
 	}
 }
+
+func (s *StringLiteral) expressionNode()      {}
+func (s *StringLiteral) TokenLiteral() string { return s.Token.Literal }
+func (s *StringLiteral) String() string       { return s.Token.Literal }
 
 // let x = 10; would be represented by an AST of:
 // (Program

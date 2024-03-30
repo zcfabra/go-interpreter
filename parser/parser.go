@@ -459,6 +459,9 @@ func (p *Parser) parseCallArguments() []ast.Expression {
 	return args
 }
 
+func (p *Parser) parseStringLiteral() ast.Expression {
+	return &ast.StringLiteral{Token: p.curToken, Value: p.curToken.Literal}
+}
 func New(lexer *lexer.Lexer) *Parser {
 	p := &Parser{l: lexer, errors: []string{}}
 	// Prefix fns
@@ -474,6 +477,7 @@ func New(lexer *lexer.Lexer) *Parser {
 
 	p.registerPrefixFn(token.IF, p.parseIfStatement)
 	p.registerPrefixFn(token.FUNCTION, p.parseFunctionLiteral)
+	p.registerPrefixFn(token.STRING, p.parseStringLiteral)
 	// Infix fns
 	p.infixParserFns = make(map[token.TokenType]infixParseFn)
 	p.registerInfixFn(token.PLUS, p.parseInfixExpression)
@@ -485,6 +489,7 @@ func New(lexer *lexer.Lexer) *Parser {
 	p.registerInfixFn(token.LT, p.parseInfixExpression)
 	p.registerInfixFn(token.GT, p.parseInfixExpression)
 	p.registerInfixFn(token.LPAREN, p.parseCallExpression)
+	p.registerInfixFn(token.STRING, p.parseInfixExpression)
 	// Sets curToken to peekToken (which is nil at this point), sets peekToken = 0
 	p.nextToken()
 	// Sets curToken to peekToken (which is now 0), sets peekToken = 1
